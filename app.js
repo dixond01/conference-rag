@@ -2,6 +2,10 @@
 // SUPABASE RAG APPLICATION
 // ============================================
 
+// Tuned for gte-small: random sentence pairs average ~0.78, so its scores are compressed near the top
+const SIM_HIGH = 0.86;
+const SIM_MID = 0.82;
+
 // Check if config is valid BEFORE trying to create Supabase client
 function isConfigValid() {
     if (typeof SUPABASE_CONFIG === 'undefined') return false;
@@ -545,8 +549,8 @@ async function askQuestion() {
         // Compute overall similarity (weighted avg across source talks)
         const overallSimilarity = topTalks.reduce((sum, t) => sum + t.avgSimilarity, 0) / topTalks.length;
         const overallBadge = similarityBadge(overallSimilarity);
-        const simClass = overallSimilarity >= 0.70 ? 'similarity-high'
-            : overallSimilarity >= 0.40 ? 'similarity-mid' : 'similarity-low';
+        const simClass = overallSimilarity >= SIM_HIGH ? 'similarity-high'
+            : overallSimilarity >= SIM_MID ? 'similarity-mid' : 'similarity-low';
 
         let html = `<div class="result-card rag-answer rag-${simClass}">
             <div class="result-card-header">
@@ -720,9 +724,9 @@ function escapeHtml(text) {
 function similarityBadge(similarity) {
     const pct = (similarity * 100).toFixed(0);
     let cls;
-    if (similarity >= 0.70) {
+    if (similarity >= SIM_HIGH) {
         cls = 'similarity-high';
-    } else if (similarity >= 0.40) {
+    } else if (similarity >= SIM_MID) {
         cls = 'similarity-mid';
     } else {
         cls = 'similarity-low';
