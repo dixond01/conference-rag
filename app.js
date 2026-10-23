@@ -6,6 +6,13 @@
 const SIM_HIGH = 0.86;
 const SIM_MID = 0.82;
 
+// How RAG ranks talks from matched sentences (switch to compare):
+//   'weighted' = average similarity × ln(1 + matches), so talks with many matches rank higher
+//   'average'  = average similarity only (original behavior)
+const TALK_RANKING = 'weighted';
+// RAG pulls more sentences than semantic search so per-talk match counts mean something
+const RAG_MATCH_COUNT = 50;
+
 // Check if config is valid BEFORE trying to create Supabase client
 function isConfigValid() {
     if (typeof SUPABASE_CONFIG === 'undefined') return false;
@@ -535,7 +542,7 @@ async function askQuestion() {
         const embedding = await getEmbedding(question);
 
         // Step 2: Search for similar sentences
-        const results = await searchSentences(embedding);
+        const results = await searchSentences(embedding, RAG_MATCH_COUNT);
 
         // Step 3: Group by talk (with similarity scores and URLs)
         const topTalks = groupByTalk(results);
@@ -568,7 +575,7 @@ async function askQuestion() {
                 <div class="result-card-header">
                     <div>
                         <div class="result-title"><a href="${escapeHtml(talk.url)}" target="_blank" class="result-title-link">${escapeHtml(talk.title)}</a></div>
-                        <div class="result-speaker">by ${escapeHtml(talk.speaker)}</div>
+                        <div class="result-speaker">by ${escapeHtml(talk.speaker)} · ${talk.matchCount} matching sentence${talk.matchCount === 1 ? '' : 's'}</div>
                     </div>
                     ${talkBadge}
                 </div>
@@ -618,12 +625,12 @@ async function getEmbedding(text) {
 }
 
 // Search sentences using vector similarity
-async function searchSentences(embedding) {
+async function searchSentences(embedding, matchCount = 20) {
     if (!supabaseClient) throw new Error('Supabase not configured');
 
     const { data, error } = await supabaseClient.rpc('match_sentences', {
         query_embedding: embedding,
-        match_count: 20
+        match_count: matchCount
     });
 
     if (error) throw new Error(`Database search failed: ${error.message}`);
@@ -649,8 +656,15 @@ function groupByTalk(sentences) {
         talkMap[sent.talk_id].totalSimilarity += sent.similarity;
     }
 
+    // Ranking score is separate from the displayed avgSimilarity, so badges keep
+    // using the calibrated SIM_HIGH / SIM_MID thresholds
+    const rankScore = talk => {
+        const avg = talk.totalSimilarity / talk.sentences.length;
+        return TALK_RANKING === 'weighted' ? avg * Math.log(1 + talk.sentences.length) : avg;
+    };
+
     return Object.values(talkMap)
-        .sort((a, b) => b.totalSimilarity / b.sentences.length - a.totalSimilarity / a.sentences.length)
+        .sort((a, b) => rankScore(b) - rankScore(a))
         .slice(0, 3)
         .map(talk => ({
             talk_id: talk.talk_id,
@@ -658,10 +672,7 @@ function groupByTalk(sentences) {
             speaker: talk.speaker,
             url: talk.url,
             text: talk.sentences.join(' '),
-            // TODO: Is average similarity the right metric? Alternatives worth researching:
-            // - Max similarity (best single match per talk)
-            // - Average of top-3 sentences (reduces noise from weak matches)
-            // - Weighted by sentence count (rewards talks with more matches)
+            matchCount: talk.sentences.length,
             avgSimilarity: talk.totalSimilarity / talk.sentences.length
         }));
 }
