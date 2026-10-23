@@ -4,9 +4,11 @@ import { getUser } from '../_shared/auth.ts';
 // Groq exposes an OpenAI-compatible chat completions API
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 // Override with: supabase secrets set GROQ_MODEL=...
-const MODEL = Deno.env.get('GROQ_MODEL') ?? 'llama-3.3-70b-versatile';
-// ~3k tokens per talk keeps 3 talks well inside free-tier per-minute token limits
-const MAX_CHARS_PER_TALK = 12000;
+// (llama-3.3-70b-versatile was retired; list current models at GET /openai/v1/models)
+const MODEL = Deno.env.get('GROQ_MODEL') ?? 'openai/gpt-oss-120b';
+// Free tier allows 8,000 tokens/minute per model, and Groq counts prompt + max output.
+// ~1.5k tokens per talk keeps one request around 5k, so ~1 question every 40s.
+const MAX_CHARS_PER_TALK = 6000;
 
 interface ContextTalk {
   title: string;
@@ -31,7 +33,8 @@ function buildPrompt(question: string, talks: ContextTalk[]) {
     'Use ONLY the talks provided. Cite the talks you draw from by title and speaker, e.g. ' +
     '("The Ninety and Ten", Elder Michael A. Dunn). ' +
     'If the talks do not answer the question, say so instead of guessing. ' +
-    'Keep the answer to a few short paragraphs.';
+    // app.js shows the answer as plain text, so markdown would appear as raw ** and |
+    'Write plain text in 2-3 short paragraphs. Do not use markdown, tables, bullet points, or bold.';
 
   const user = `Conference talks:\n\n${context}\n\nQuestion: ${question}`;
   return { system, user };
@@ -89,14 +92,25 @@ Deno.serve(async (req) => {
         { role: 'user', content: userPrompt },
       ],
       temperature: 0.3,
+      // gpt-oss is a reasoning model; low effort cuts hidden reasoning tokens
+      reasoning_effort: 'low',
+      max_completion_tokens: 800,
     }),
   });
 
   if (!groqRes.ok) {
     // Log Groq's message server-side; don't forward provider details to the browser
     console.error('Groq error', groqRes.status, await groqRes.text());
-    const msg = groqRes.status === 429 ? 'Rate limited, try again in a minute' : 'Failed to generate answer';
-    return json({ error: msg }, 502);
+    if (groqRes.status === 429) {
+      // Groq sends how long to wait in the retry-after header (seconds)
+      const retryAfter = Math.ceil(Number(groqRes.headers.get('retry-after')) || 60);
+      return json({
+        error: `Rate limit reached. Try again in ${retryAfter} seconds.`,
+        code: 'rate_limited',
+        retry_after_seconds: retryAfter,
+      }, 429);
+    }
+    return json({ error: 'The AI service failed to generate an answer.', code: 'upstream_error' }, 502);
   }
 
   const data = await groqRes.json();

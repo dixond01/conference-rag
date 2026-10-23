@@ -587,6 +587,23 @@ async function askQuestion() {
 // SHARED SEARCH UTILITIES
 // ============================================
 
+// On a non-2xx response, invoke() returns data = null and puts the
+// Response in error.context, so the function's JSON error must be read from there.
+async function functionErrorMessage(error, fallback) {
+    const res = error?.context;
+    if (!(res instanceof Response)) return fallback;  // network or CORS failure
+    try {
+        const body = await res.json();
+        if (res.status === 429) {
+            return `⏳ ${body.error || 'Rate limit reached. Please wait a minute and try again.'}`;
+        }
+        if (res.status === 401) return 'Your session expired. Please sign in again.';
+        return body.error || fallback;
+    } catch {
+        return fallback;
+    }
+}
+
 // Get embedding via Edge Function
 async function getEmbedding(text) {
     const { data, error } = await supabaseClient.functions.invoke('embed-question', {
@@ -594,7 +611,7 @@ async function getEmbedding(text) {
     });
 
     if (error) {
-        throw new Error(data?.error || 'Failed to get embedding');
+        throw new Error(await functionErrorMessage(error, 'Failed to get embedding'));
     }
 
     return data.embedding;
@@ -694,7 +711,7 @@ async function generateAnswer(question, contextTalks) {
     });
 
     if (error) {
-        throw new Error(data?.error || 'Failed to generate answer');
+        throw new Error(await functionErrorMessage(error, 'Failed to generate answer'));
     }
 
     return data.answer;
