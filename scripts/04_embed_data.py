@@ -24,15 +24,16 @@ Prerequisites:
 import json
 import os
 import sys
-import time
 
-from openai import OpenAI
+import torch
+from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
 
 
 INPUT_FILE = os.path.join('scripts', 'output', 'sentences.json')
 OUTPUT_FILE = os.path.join('scripts', 'output', 'sentences_with_embeddings.json')
-BATCH_SIZE = 100
+MODEL_NAME = 'thenlper/gte-small'
+BATCH_SIZE = 256
 
 
 def load_secrets():
@@ -52,7 +53,7 @@ def main():
     print("=" * 60)
     print(f"Generating Embeddings for {len(records):,} Sentences")
     print("=" * 60)
-    print(f"   Model: text-embedding-3-small (1,536 dimensions)")
+    print(f"   Model: gte-small (384 dimensions)")
     print(f"   Batch size: {BATCH_SIZE}\n")
 
     # Check if there's a partial result we can resume from
@@ -72,8 +73,8 @@ def main():
         records_to_embed = records
 
     # Generate embeddings
-    secrets = load_secrets()
-    client = OpenAI(api_key=secrets['OPENAI_API_KEY'])
+    # float32: on CPU, the default float16 load ran ~12x slower
+    model = SentenceTransformer(MODEL_NAME, model_kwargs={"dtype": torch.float32})
 
     embedded_records = list(existing)  # Start from any partial results
     errors = 0
@@ -83,14 +84,10 @@ def main():
         batch_texts = [r['text'] for r in batch]
 
         try:
-            response = client.embeddings.create(
-                model='text-embedding-3-small',
-                input=batch_texts
-            )
-
-            for record, item in zip(batch, response.data):
+            vectors = model.encode(batch_texts, normalize_embeddings=True)
+            for record, vec in zip(batch, vectors):
                 record_with_embedding = dict(record)
-                record_with_embedding['embedding'] = item.embedding
+                record_with_embedding['embedding'] = vec.tolist()
                 embedded_records.append(record_with_embedding)
 
         except Exception as e:
@@ -102,8 +99,6 @@ def main():
             with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
                 json.dump(embedded_records, f, ensure_ascii=False)
 
-        time.sleep(0.1)
-
     # Final save
     with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
         json.dump(embedded_records, f, ensure_ascii=False)
@@ -113,12 +108,6 @@ def main():
     print(f"   Embedded: {len(embedded_records):,} sentences")
     if errors:
         print(f"   Errors:   {errors:,}")
-
-    # Estimate cost
-    total_chars = sum(len(r['text']) for r in embedded_records)
-    est_tokens = total_chars / 4  # rough estimate
-    cost = (est_tokens / 1_000_000) * 0.020
-    print(f"   💰 Estimated cost: ${cost:.4f}")
 
     print(f"\n💾 Saved to {OUTPUT_FILE} ({file_size_mb:.1f} MB)")
     print(f"   This file is your safety net — embeddings are preserved on disk.")

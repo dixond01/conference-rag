@@ -4,3 +4,4 @@ pandas
 tqdm
 openai
 supabase
+sentence-transformers

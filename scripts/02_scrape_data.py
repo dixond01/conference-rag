@@ -26,8 +26,8 @@ from tqdm import tqdm
 
 
 YEARS_TO_SCRAPE = 5
-START_YEAR = 2025 - YEARS_TO_SCRAPE
-END_YEAR = 2025
+START_YEAR = 2026 - YEARS_TO_SCRAPE
+END_YEAR = 2026
 OUTPUT_DIR = os.path.join('scripts', 'output')
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, 'talks.json')
 
@@ -114,7 +114,7 @@ def scrape_talk(talk_url, session):
     if not content_div:
         return None
 
-    content = " ".join(p.text.strip() for p in content_div.find_all("p"))
+    paragraphs = [p.text.strip() for p in content_div.find_all("p") if p.text.strip()]
 
     year_match = re.search(r'/(\d{4})/', talk_url)
     year = int(year_match.group(1)) if year_match else None
@@ -127,7 +127,8 @@ def scrape_talk(talk_url, session):
         "year": year,
         "season": season,
         "url": talk_url,
-        "text": content
+        "text": " ".join(paragraphs),
+        "paragraphs": paragraphs
     }
 
 

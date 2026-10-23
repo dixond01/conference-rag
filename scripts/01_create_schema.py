@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS sentence_embeddings (
     url TEXT,
     sentence_num INTEGER,
     text TEXT NOT NULL,
-    embedding vector(1536),
+    embedding vector(384),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -103,7 +103,7 @@ USING (true);
 
 -- Create function for similarity search
 CREATE OR REPLACE FUNCTION match_sentences(
-  query_embedding vector(1536),
+  query_embedding vector(384),
   match_count int DEFAULT 20
 )
 RETURNS TABLE (
