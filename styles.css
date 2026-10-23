@@ -730,6 +730,176 @@ input:focus {
 }
 
 /* ============================================
+   MY NOTES (HISTORY PAGE)
+   ============================================ */
+
+/* Links styled as buttons (navbar "My notes" / "Back to search") */
+a.nav-link {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.history-container {
+    max-width: 900px;
+    padding-top: var(--spacing-lg);
+}
+
+.history-toolbar {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: center;
+    flex-wrap: wrap;
+    margin: var(--spacing-md) 0 var(--spacing-sm);
+}
+
+.history-toolbar input[type="text"] {
+    flex: 1;
+    min-width: 200px;
+}
+
+.history-toolbar select {
+    padding: var(--spacing-sm);
+    background: var(--surface);
+    border: 2px solid var(--surface-light);
+    border-radius: var(--radius-md);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 1rem;
+}
+
+.segmented {
+    display: flex;
+    background: var(--surface);
+    border: 2px solid var(--surface-light);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.segment {
+    background: transparent;
+    color: var(--text-muted);
+    border-radius: 0;
+    padding: var(--spacing-xs) var(--spacing-sm);
+}
+
+.segment.active {
+    background: var(--surface-light);
+    color: var(--text);
+}
+
+.history-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+    margin-bottom: var(--spacing-md);
+}
+
+.history-action-buttons {
+    display: flex;
+    gap: var(--spacing-xs);
+}
+
+.history-action-buttons button {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.875rem;
+}
+
+.history-action-buttons button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.btn-danger:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--error);
+}
+
+.history-count {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.history-day {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: var(--spacing-lg) 0 var(--spacing-sm);
+}
+
+.mode-badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--radius-sm);
+    background: var(--surface-light);
+}
+
+.mode-badge.mode-rag { background: rgba(99, 102, 241, 0.2); color: #a5b4fc; }
+.mode-badge.mode-semantic { background: rgba(62, 207, 142, 0.15); color: var(--primary); }
+.mode-badge.mode-keyword { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+
+.history-time {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin-left: var(--spacing-xs);
+}
+
+.history-entry-buttons {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.icon-btn {
+    background: transparent;
+    color: var(--text-muted);
+    padding: 0.25rem 0.5rem;
+    font-size: 0.85rem;
+}
+
+.icon-btn:hover {
+    background: var(--surface-light);
+    color: var(--text);
+}
+
+.history-query {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: var(--spacing-xs) 0;
+}
+
+.history-answer {
+    white-space: pre-wrap;
+}
+
+.history-sources {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.history-sources .result-speaker {
+    display: block;
+}
+
+.history-snippet {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    font-style: italic;
+    border-left: 2px solid var(--surface-light);
+    padding-left: var(--spacing-xs);
+    margin-top: 0.25rem;
+}
+
+/* ============================================
    RESPONSIVE DESIGN
    ============================================ */
 
@@ -760,5 +930,15 @@ input:focus {
 
     .panel-input {
         flex-direction: column;
+    }
+
+    .user-info {
+        flex-wrap: wrap;
+        gap: var(--spacing-xs);
+    }
+
+    .history-toolbar input[type="text"] {
+        min-width: 0;
+        width: 100%;
     }
 }

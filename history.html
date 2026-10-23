@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Notes - Conference Q&A</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div id="history-screen" class="hidden">
+        <nav class="navbar">
+            <h2>📝 My Notes</h2>
+            <div class="user-info">
+                <span id="user-email"></span>
+                <a href="index.html" class="btn-secondary nav-link">← Back to search</a>
+                <button id="logout-btn" class="btn-secondary">Logout</button>
+            </div>
+        </nav>
+
+        <div class="container history-container">
+            <p class="panel-description">
+                Every search and answer you run is saved here, visible only to you. Gather quotes and
+                sources across searches, then copy or export them for a talk or lesson.
+            </p>
+
+            <div class="history-toolbar">
+                <div class="segmented" role="group" aria-label="Time range">
+                    <button class="segment active" data-scope="session">This session</button>
+                    <button class="segment" data-scope="all">All history</button>
+                </div>
+                <select id="mode-filter" aria-label="Filter by search type">
+                    <option value="all">All types</option>
+                    <option value="rag">🤖 Ask a Question</option>
+                    <option value="semantic">🧠 Semantic</option>
+                    <option value="keyword">🔍 Keyword</option>
+                </select>
+                <input type="text" id="history-search" placeholder="Search your notes..." autocomplete="off" />
+            </div>
+
+            <div class="history-actions">
+                <span id="history-count" class="history-count"></span>
+                <div class="history-action-buttons">
+                    <button id="export-btn" class="btn-secondary">⬇️ Export notes (.md)</button>
+                    <button id="clear-btn" class="btn-secondary btn-danger">🗑️ Clear shown</button>
+                </div>
+            </div>
+
+            <div id="history-message" class="message hidden"></div>
+            <div id="history-list"></div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="history.js"></script>
+</body>
+
+</html>

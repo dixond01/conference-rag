@@ -12,6 +12,8 @@ const SIM_MID = 0.82;
 const TALK_RANKING = 'weighted';
 // RAG pulls more sentences than semantic search so per-talk match counts mean something
 const RAG_MATCH_COUNT = 50;
+// Keyword/semantic results saved per history entry (RAG saves its 3 source talks)
+const HISTORY_SOURCE_LIMIT = 5;
 
 // Check if config is valid BEFORE trying to create Supabase client
 function isConfigValid() {
@@ -449,11 +451,16 @@ async function keywordSearch() {
                     title: row.title || 'Unknown Talk',
                     speaker: row.speaker || 'Unknown Speaker',
                     url: row.url || '',
+                    firstMatch: row.text,
                     sentences: []
                 };
             }
             talks[talkId].sentences.push(highlightKeyword(row.text, query));
         }
+
+        saveHistory('keyword', query, null, Object.values(talks).slice(0, HISTORY_SOURCE_LIMIT).map(t => ({
+            title: t.title, speaker: t.speaker, url: t.url, snippet: t.firstMatch
+        })));
 
         let html = '';
         for (const talk of Object.values(talks)) {
@@ -500,6 +507,10 @@ async function semanticSearch() {
             showResults('semantic', '<div class="no-results">No similar content found. Try a different query.</div>');
             return;
         }
+
+        saveHistory('semantic', query, null, results.slice(0, HISTORY_SOURCE_LIMIT).map(r => ({
+            title: r.title, speaker: r.speaker, url: r.url, similarity: r.similarity, snippet: r.text
+        })));
 
         // Step 3: Display results with similarity badges
         let html = '';
@@ -552,6 +563,11 @@ async function askQuestion() {
 
         // Step 5: Generate answer with full context
         const answer = await generateAnswer(question, enrichedTalks);
+
+        saveHistory('rag', question, answer, topTalks.map(t => ({
+            title: t.title, speaker: t.speaker, url: t.url,
+            similarity: t.avgSimilarity, matchCount: t.matchCount
+        })));
 
         // Compute overall similarity (weighted avg across source talks)
         const overallSimilarity = topTalks.reduce((sum, t) => sum + t.avgSimilarity, 0) / topTalks.length;
@@ -609,6 +625,19 @@ async function functionErrorMessage(error, fallback) {
     } catch {
         return fallback;
     }
+}
+
+// Save a finished search to query_history for the "My notes" page.
+// Fire-and-forget: a failed save is logged but never breaks the search.
+// user_id is filled in by the database from the JWT (DEFAULT auth.uid()).
+function saveHistory(mode, query, answer, sources) {
+    if (!supabaseClient) return;
+    supabaseClient
+        .from('query_history')
+        .insert({ mode, query, answer, sources })
+        .then(({ error }) => {
+            if (error) console.warn('Could not save to history:', error.message);
+        });
 }
 
 // Get embedding via Edge Function

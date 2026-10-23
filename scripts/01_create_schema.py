@@ -102,7 +102,9 @@ TO anon, authenticated
 USING (true);
 
 -- Create function for similarity search
-CREATE OR REPLACE FUNCTION match_sentences(
+-- (DROP first: CREATE OR REPLACE can't change a function's return columns)
+DROP FUNCTION IF EXISTS match_sentences(vector, integer);
+CREATE FUNCTION match_sentences(
   query_embedding vector(384),
   match_count int DEFAULT 20
 )
@@ -111,6 +113,7 @@ RETURNS TABLE (
   talk_id uuid,
   title text,
   speaker text,
+  url text,
   text text,
   similarity float
 )
@@ -121,6 +124,7 @@ AS $$
     sentence_embeddings.talk_id,
     sentence_embeddings.title,
     sentence_embeddings.speaker,
+    sentence_embeddings.url,
     sentence_embeddings.text,
     1 - (sentence_embeddings.embedding <=> query_embedding) as similarity
   FROM sentence_embeddings
