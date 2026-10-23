@@ -21,10 +21,14 @@ const modeFilter = document.getElementById('mode-filter');
 const searchInput = document.getElementById('history-search');
 const loading = document.getElementById('loading');
 
-// config.js loads config.public.json asynchronously, then fires this event
+// config.js loads config.public.json asynchronously, then fires 'config-loaded'.
+// The fetch can finish before this script runs, so also start right away if
+// the real values are already there (same approach as initializeApp in app.js).
 window.addEventListener('config-loaded', init);
+if (!SUPABASE_CONFIG.url.includes('YOUR_SUPABASE')) init();
 
 async function init() {
+    if (supabaseClient) return;  // already started (both paths can fire)
     supabaseClient = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
 
     // Same login wall as the main page: the session is shared through localStorage
